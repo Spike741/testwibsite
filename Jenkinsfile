@@ -11,7 +11,8 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    dockerImage = docker.build("hello-world:${env.BUILD_ID}")
+                    // Use full ECR repo URI + tag here
+                    dockerImage = docker.build("343218198881.dkr.ecr.ap-south-1.amazonaws.com/testwebsite:${env.BUILD_ID}")
                 }
             }
         }

@@ -1,6 +1,14 @@
 pipeline {
     agent any
 
+    environment {
+        AWS_REGION = 'ap-south-1'
+        ECR_REGISTRY = '343218198881.dkr.ecr.ap-south-1.amazonaws.com'
+        ECR_REPOSITORY = 'testwebsite'
+        IMAGE_TAG = "${env.BUILD_ID}"
+        IMAGE_URI = "${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}"
+    }
+
     stages {
         stage('Checkout') {
             steps {
@@ -8,25 +16,30 @@ pipeline {
             }
         }
 
+        stage('Authenticate Docker to ECR') {
+            steps {
+                withCredentials([[
+                    $class: 'AmazonWebServicesCredentialsBinding',
+                    credentialsId: 'aws-ecr-cred',
+                    accessKeyVariable: 'AWS_ACCESS_KEY_ID',
+                    secretKeyVariable: 'AWS_SECRET_ACCESS_KEY'
+                ]]) {
+                    bat """
+                    aws configure set aws_access_key_id %AWS_ACCESS_KEY_ID%
+                    aws configure set aws_secret_access_key %AWS_SECRET_ACCESS_KEY%
+                    aws configure set default.region ${env.AWS_REGION}
+
+                    aws ecr get-login-password --region ${env.AWS_REGION} | docker login --username AWS --password-stdin ${env.ECR_REGISTRY}
+                    """
+                }
+            }
+        }
+
         stage('Build and Push Docker Image') {
             steps {
                 script {
-                    // Clean Docker credentials to avoid conflicts (Windows syntax)
-                    bat '''
-                    if exist %USERPROFILE%\\.dockercfg del %USERPROFILE%\\.dockercfg
-                    if exist %USERPROFILE%\\.docker\\config.json del %USERPROFILE%\\.docker\\config.json
-                    '''
-
-                    // Build Docker image
-                    def dockerImage = docker.build("343218198881.dkr.ecr.ap-south-1.amazonaws.com/testwebsite:${env.BUILD_ID}")
-
-                    // Push Docker image to ECR using Jenkins credentials
-                    docker.withRegistry(
-                        'https://343218198881.dkr.ecr.ap-south-1.amazonaws.com',
-                        'aws-ecr-cred' // <-- Use your actual Jenkins credentials ID here
-                    ) {
-                        dockerImage.push()
-                    }
+                    def dockerImage = docker.build(env.IMAGE_URI)
+                    dockerImage.push()
                 }
             }
         }

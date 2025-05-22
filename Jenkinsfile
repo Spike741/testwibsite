@@ -8,7 +8,7 @@ pipeline {
         ECR_REGISTRY     = "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
         IMAGE_TAG        = "${env.BUILD_ID}"
         IMAGE_URI        = "${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}"
-        CREDENTIALS_ID   = 'aws-ecr-creds'  // Jenkins AWS Credentials ID (must match Jenkins credentials)
+        CREDENTIALS_ID   = 'aws-ecr-cred'  // Jenkins AWS Credentials ID (must match Jenkins credentials)
     }
 
     stages {
